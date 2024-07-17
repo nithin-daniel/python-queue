@@ -5,12 +5,6 @@ import threading
 
 app = Flask(__name__)
 
-
-
-import heapq
-import time
-
-
 pq = []
 
 @app.route('/add_task', methods=['POST'])
