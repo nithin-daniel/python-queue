@@ -1,72 +1,68 @@
 from flask import Flask, request, jsonify
+import heapq
 import time
-from queue import PriorityQueue
-from threading import Thread
+import threading
 
 app = Flask(__name__)
 
-customers = PriorityQueue()
+# # Create a priority queue
+# pq = []
 
-def process_queue():
-    while True:
-        if not customers.empty():
-            priority, name, delay = customers.get()
-            print((priority, name))
-            time.sleep(delay)
-        else:
-            time.sleep(1)
+# # Function to process tasks
+# def process_tasks():
+#     while True:
+#         if pq:
+#             task = heapq.heappop(pq)
+#             print(f"Processing task: {task}")
+#             time.sleep(task[2])
+#         else:
+#             time.sleep(1)  # Sleep for a second if the queue is empty
 
-queue_list = []
-def log_queue_state():
-    temp_queue = PriorityQueue()
-    
-    while not customers.empty():
-        item = customers.get()
-        queue_list.append({'priority': item[0], 'name': item[1], 'delay': item[2]})
-        temp_queue.put(item)
-    
-    while not temp_queue.empty():
-        customers.put(temp_queue.get())
-    
-    # Print the queue list to the console
-    print("Queue list:", queue_list)
+# # Start the task processing in a separate thread
+# threading.Thread(target=process_tasks, daemon=True).start()
 
-# Start the queue processing thread
-thread = Thread(target=process_queue, daemon=True)
-thread.start()
+# @app.route('/add_task', methods=['POST'])
+# def add_task():
+#     data = request.json
+#     if 'priority' in data and 'name' in data and 'duration' in data:
+#         task = (data['priority'], data['name'], data['duration'])
+#         heapq.heappush(pq, task)
+#         return jsonify({"message": "Task added successfully"}), 201
+#     return jsonify({"error": "Invalid task data"}), 400
 
-@app.route('/add_customer', methods=['POST'])
-def add_customer():
-    data = request.get_json()
-    name = data.get('name')
-    priority = data.get('priority')
-    delay = data.get('delay')
-    
-    if not name or not priority or not delay:
-        return jsonify({'error': 'Missing data'}), 400
-    
-    customers.put((priority, name, delay))
-    
-    # Print the queue state after adding the customer
-    log_queue_state()
-    
-    return jsonify({'message': 'Customer added'}), 200
+# @app.route('/get_tasks', methods=['GET'])
+# def get_tasks():
+#     return jsonify(list(pq))
 
-@app.route('/queue', methods=['GET'])
-def get_queue():
-    temp_queue = PriorityQueue()
-    queue_list = []
+# if __name__ == '__main__':
+#     app.run(debug=True)
+
+import heapq
+import time
+
+
+pq = []
+
+@app.route('/add_task', methods=['POST'])
+def add_task():
+    global pg
+    data = request.json
+    task = (data['priority'], data['name'], data['duration'])
+    heapq.heappush(pq, task)
+    return jsonify({"message": "Task added successfully"}), 201
+
+
+def process_next_task():
+    while pq:
+        task = heapq.heappop(pq)
+        print("Processing task:", task)
+        time.sleep(task[2])
+    return jsonify({"message": "No tasks remaining"}), 200
     
-    while not customers.empty():
-        item = customers.get()
-        print(item)
-        queue_list.append({'priority': item[0], 'name': item[1], 'delay': item[2]})
-        temp_queue.put(item)
     
-    while not temp_queue.empty():
-        customers.put(temp_queue.get())
-    
-    return jsonify(queue_list)
+@app.route('/get_task', methods=['GET'])
+def get_task():
+    return process_next_task()
 
 if __name__ == '__main__':
     app.run(debug=True)
