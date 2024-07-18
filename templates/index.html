@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Processing</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+</head>
+
+<body>
+    <h1>Task Processing</h1>
+    <form id="taskForm">
+        <label for="priority">Priority:</label>
+        <input type="number" id="priority" name="priority" placeholder="Enter priority"><br><br>
+
+        <label for="name">Name:</label>
+        <input type="text" id="name" name="name" placeholder="Enter task name"><br><br>
+
+        <label for="duration">Duration (seconds):</label>
+        <input type="number" id="duration" name="duration" placeholder="Enter duration"><br><br>
+
+        <button type="submit">Add Task</button>
+    </form>
+    <br>
+    <button id="startButton">Run</button>
+    <div id="taskList"></div>
+
+    <script>
+        const socket = io();
+        const startButton = document.getElementById('startButton');
+        const taskList = document.getElementById('taskList');
+
+        startButton.addEventListener('click', () => {
+            socket.emit('start_processing');
+        });
+
+        socket.on('processing_started', (data) => {
+            console.log(data.message);
+        });
+        startButton.addEventListener('click', function () {
+            fetch('/get_task')
+                .then(response => response.json())
+                .then(data => {
+                    const taskResultDiv = document.getElementById('taskResult');
+                    if (data.task) {
+                        taskResultDiv.innerHTML = `<p>Last processed task: ${data.task[1]} with priority ${data.task[0]} and duration ${data.task[2]} seconds</p>`;
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        });
+        socket.on('task_processed', (data) => {
+            const taskItem = document.createElement('div');
+            taskItem.textContent = `Processed task: ${data.message}`;
+            taskList.appendChild(taskItem);
+        });
+
+        socket.on('processing_complete', (data) => {
+            console.log(data.message);
+            const completionMessage = document.createElement('div');
+            completionMessage.textContent = data.message;
+            taskList.appendChild(completionMessage);
+        });
+
+        // Add a task when the form is submitted
+        document.getElementById('taskForm').addEventListener('submit', function (event) {
+            event.preventDefault();
+            const priority = document.getElementById('priority').value;
+            const name = document.getElementById('name').value;
+            const duration = document.getElementById('duration').value;
+
+            const taskData = { priority: parseInt(priority), name: name, duration: parseInt(duration) };
+
+            fetch('/add_task', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(taskData),
+            })
+                .then(response => response.json())
+                .then(data => {
+                    console.log(data.message);
+                    // Optionally clear the form
+                    document.getElementById('taskForm').reset();
+                })
+                .catch(error => console.error('Error:', error));
+        });
+    </script>
+</body>
+
+</html>
